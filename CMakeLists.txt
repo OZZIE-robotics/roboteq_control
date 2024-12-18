@@ -100,11 +100,28 @@ set(roboteq_control_SRC
   src/configurator/gpio_encoder.cpp
 )
 
+set(roboteq_dual_control_SRC
+  src/roboteq_dual_control.cpp
+  src/roboteq/serial_controller.cpp
+  src/roboteq/roboteq_dual.cpp
+  src/roboteq/motor.cpp
+  src/configurator/motor_param.cpp
+  src/configurator/motor_pid.cpp
+  src/configurator/gpio_analog.cpp
+  src/configurator/gpio_pulse.cpp
+  src/configurator/gpio_encoder.cpp
+)
+
 # Declare a cpp executable
 add_executable(${PROJECT_NAME}_node ${roboteq_control_SRC})
 add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS})
 target_link_libraries(${PROJECT_NAME}_node ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 set_target_properties(${PROJECT_NAME}_node PROPERTIES OUTPUT_NAME driver_node PREFIX "")
+
+add_executable(${PROJECT_NAME}_node_dual ${roboteq_dual_control_SRC})
+add_dependencies(${PROJECT_NAME}_node_dual ${${PROJECT_NAME}_EXPORTED_TARGETS})
+target_link_libraries(${PROJECT_NAME}_node_dual ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+set_target_properties(${PROJECT_NAME}_node_dual PROPERTIES OUTPUT_NAME dual_driver_node PREFIX "")
 
 ## Declare a cpp executable
 #add_executable(roboteq_node ${roboteq_control_SRC})
@@ -120,6 +137,12 @@ set_target_properties(${PROJECT_NAME}_node PROPERTIES OUTPUT_NAME driver_node PR
 
 # Mark executables and/or libraries for installation
  install(TARGETS ${PROJECT_NAME}_node
+   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+ )
+
+ install(TARGETS ${PROJECT_NAME}_node_dual
    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

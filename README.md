@@ -22,7 +22,7 @@ Clone on your catkin workspace this repository, download all dependencies and co
 # Make catkin workspace if does not exist and clone this repo
 mkdir -p ~/catkin_ws/src
 cd ~/catkin_ws/src
-git clone https://github.com/rbonghi/roboteq_control.git
+git clone https://github.com/OZZIE-robotics/roboteq_control.git
 # Install all dependecies
 cd ..
 rosdep install --from-paths src --ignore-src -r -y
