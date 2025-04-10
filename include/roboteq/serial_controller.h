@@ -74,8 +74,13 @@ public:
 
     string getQuery(string msg, string params="")
     {
+        // auto start_time = std::chrono::steady_clock::now();
+        
         if(query(msg, params))
         {
+            // auto end_time = std::chrono::steady_clock::now();
+            // double elapsed_ms = std::chrono::duration<double, std::milli>(end_time - start_time).count();
+            // ROS_INFO_STREAM(msg << " time: " << elapsed_ms << " ms");
             return get();
         }
         else

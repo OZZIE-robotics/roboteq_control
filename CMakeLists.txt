@@ -104,7 +104,8 @@ set(roboteq_dual_control_SRC
   src/roboteq_dual_control.cpp
   src/roboteq/serial_controller.cpp
   src/roboteq/roboteq_dual.cpp
-  src/roboteq/motor.cpp
+#   src/roboteq/motor.cpp
+  src/roboteq/motor_lite.cpp
   src/configurator/motor_param.cpp
   src/configurator/motor_pid.cpp
   src/configurator/gpio_analog.cpp

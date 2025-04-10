@@ -456,7 +456,23 @@ void Roboteq::read(const ros::Time& time, const ros::Duration& period) {
     auto read_motor_1 = [&]() {
         std::vector<std::string> motors_1[mMotor_1.size()];
         std::vector<std::string> fields;
-        
+        // Read status motor
+        // motor status flags [pag. 246]
+        string str_status_1 = mSerial_1->getQuery("FM");
+        // ROS_INFO_STREAM("FM=" << str_status_1);
+        boost::split(fields, str_status_1, boost::algorithm::is_any_of(":"));
+        for(int i = 0; i < fields.size(); ++i) {
+            motors_1[i].push_back(fields[i]);
+        }
+
+        // motor command [pag. 250]
+        string str_motor_1 = mSerial_1->getQuery("M");
+        // ROS_INFO_STREAM("M =" << str_motor);
+        boost::split(fields, str_motor_1, boost::algorithm::is_any_of(":"));
+        for(int i = 0; i < fields.size(); ++i) {
+            motors_1[i].push_back(fields[i]);
+        }
+
         // motor feedback [pag. 244]
         string str_feedback_1 = mSerial_1->getQuery("F");
         // ROS_INFO_STREAM("F_1 =" << str_feedback_1);
@@ -465,10 +481,57 @@ void Roboteq::read(const ros::Time& time, const ros::Duration& period) {
             motors_1[i].push_back(fields[i]);
         }
 
+        // motor loop error [pag. 244]
+        string str_loop_error_1 = mSerial_1->getQuery("E");
+        // ROS_INFO_STREAM("E =" << str_loop_error);
+        boost::split(fields, str_loop_error_1, boost::algorithm::is_any_of(":"));
+        for(int i = 0; i < fields.size(); ++i) {
+            motors_1[i].push_back(fields[i]);
+        }
+
+        // motor power [pag. 255]
+        string str_motor_power_1 = mSerial_1->getQuery("P");
+        // ROS_INFO_STREAM("P =" << str_motor_power);
+        boost::split(fields, str_motor_power_1, boost::algorithm::is_any_of(":"));
+        for(int i = 0; i < fields.size(); ++i) {
+            motors_1[i].push_back(fields[i]);
+        }
+
+        // power supply voltage [pag. 262]
+        string str_voltage_supply_1 = mSerial_1->getQuery("V", "2");
+        //ROS_INFO_STREAM("V2=" << str_voltage_supply);
+        for(int i = 0; i < fields.size(); ++i) {
+            motors_1[i].push_back(str_voltage_supply_1);
+        }
+
+        // motor Amps [pag. 230]
+        string str_motor_amps_1 = mSerial_1->getQuery("A");
+        //ROS_INFO_STREAM("A =" << str_motor_amps);
+        boost::split(fields, str_motor_amps_1, boost::algorithm::is_any_of(":"));
+        for(int i = 0; i < fields.size(); ++i) {
+            motors_1[i].push_back(fields[i]);
+        }
+
+        // motor battery amps [pag. 233]
+        string str_motor_battery_amps_1 = mSerial_1->getQuery("BA");
+        //ROS_INFO_STREAM("BA=" << str_motor_battery_amps);
+        boost::split(fields, str_motor_battery_amps_1, boost::algorithm::is_any_of(":"));
+        for(int i = 0; i < fields.size(); ++i) {
+            motors_1[i].push_back(fields[i]);
+        }
+
         // position encoder value [pag. 236]
         string str_position_encoder_absolute_1 = mSerial_1->getQuery("CB");
         // ROS_INFO_STREAM("CB =" << str_position_encoder_absolute_1);
         boost::split(fields, str_position_encoder_absolute_1, boost::algorithm::is_any_of(":"));
+        for(int i = 0; i < fields.size(); ++i) {
+            motors_1[i].push_back(fields[i]);
+        }
+
+        // motor track [pag. 260]
+        string str_motor_track_1 = mSerial_1->getQuery("TR");
+        //ROS_INFO_STREAM("TR=" << str_motor_track);
+        boost::split(fields, str_motor_track_1, boost::algorithm::is_any_of(":"));
         for(int i = 0; i < fields.size(); ++i) {
             motors_1[i].push_back(fields[i]);
         }
@@ -485,6 +548,22 @@ void Roboteq::read(const ros::Time& time, const ros::Duration& period) {
     auto read_motor_2 = [&]() {
         std::vector<std::string> motors_2[mMotor_2.size()];
         std::vector<std::string> fields;
+        // Read status motor
+        // motor status flags [pag. 246]
+        string str_status_2 = mSerial_2->getQuery("FM");
+        // ROS_INFO_STREAM("FM=" << str_status_2);
+        boost::split(fields, str_status_2, boost::algorithm::is_any_of(":"));
+        for(int i = 0; i < fields.size(); ++i) {
+            motors_2[i].push_back(fields[i]);
+        }
+
+        // motor command [pag. 250]
+        string str_motor_2 = mSerial_2->getQuery("M");
+        // ROS_INFO_STREAM("M =" << str_motor);
+        boost::split(fields, str_motor_2, boost::algorithm::is_any_of(":"));
+        for(int i = 0; i < fields.size(); ++i) {
+            motors_2[i].push_back(fields[i]);
+        }
 
         // motor feedback [pag. 244]
         string str_feedback_2 = mSerial_2->getQuery("F");
@@ -494,10 +573,57 @@ void Roboteq::read(const ros::Time& time, const ros::Duration& period) {
             motors_2[i].push_back(fields[i]);
         }
 
+        // motor loop error [pag. 244]
+        string str_loop_error_2 = mSerial_2->getQuery("E");
+        // ROS_INFO_STREAM("E =" << str_loop_error);
+        boost::split(fields, str_loop_error_2, boost::algorithm::is_any_of(":"));
+        for(int i = 0; i < fields.size(); ++i) {
+            motors_2[i].push_back(fields[i]);
+        }
+
+        // motor power [pag. 255]
+        string str_motor_power_2 = mSerial_2->getQuery("P");
+        // ROS_INFO_STREAM("P =" << str_motor_power);
+        boost::split(fields, str_motor_power_2, boost::algorithm::is_any_of(":"));
+        for(int i = 0; i < fields.size(); ++i) {
+            motors_2[i].push_back(fields[i]);
+        }
+
+        // power supply voltage [pag. 262]
+        string str_voltage_supply_2 = mSerial_2->getQuery("V", "2");
+        //ROS_INFO_STREAM("V2=" << str_voltage_supply);
+        for(int i = 0; i < fields.size(); ++i) {
+            motors_2[i].push_back(str_voltage_supply_2);
+        }
+
+        // motor Amps [pag. 230]
+        string str_motor_amps_2 = mSerial_2->getQuery("A");
+        //ROS_INFO_STREAM("A =" << str_motor_amps);
+        boost::split(fields, str_motor_amps_2, boost::algorithm::is_any_of(":"));
+        for(int i = 0; i < fields.size(); ++i) {
+            motors_2[i].push_back(fields[i]);
+        }
+
+        // motor battery amps [pag. 233]
+        string str_motor_battery_amps_2 = mSerial_2->getQuery("BA");
+        //ROS_INFO_STREAM("BA=" << str_motor_battery_amps);
+        boost::split(fields, str_motor_battery_amps_2, boost::algorithm::is_any_of(":"));
+        for(int i = 0; i < fields.size(); ++i) {
+            motors_2[i].push_back(fields[i]);
+        }
+
         // position encoder value [pag. 236]
         string str_position_encoder_absolute_2 = mSerial_2->getQuery("CB");
         // ROS_INFO_STREAM("CB =" << str_position_encoder_absolute_2);
         boost::split(fields, str_position_encoder_absolute_2, boost::algorithm::is_any_of(":"));
+        for(int i = 0; i < fields.size(); ++i) {
+            motors_2[i].push_back(fields[i]);
+        }
+
+        // motor track [pag. 260]
+        string str_motor_track_2 = mSerial_2->getQuery("TR");
+        //ROS_INFO_STREAM("TR=" << str_motor_track);
+        boost::split(fields, str_motor_track_2, boost::algorithm::is_any_of(":"));
         for(int i = 0; i < fields.size(); ++i) {
             motors_2[i].push_back(fields[i]);
         }
@@ -520,63 +646,141 @@ void Roboteq::read(const ros::Time& time, const ros::Duration& period) {
     // Read data from GPIO
     if(_isGPIOreading)
     {
-        roboteq_control::Peripheral msg_peripheral_1, msg_peripheral_2;
-
         msg_peripheral.header.stamp = ros::Time::now();
+        std::vector<std::string> fields;
+        
+        // Get Pulse in status [pag. 256]
+        string pulse_in_1 = mSerial_1->getQuery("PI");
+        boost::split(fields, pulse_in_1, boost::algorithm::is_any_of(":"));
+        // Clear msg list
+        msg_peripheral.pulse_in.clear();
+        for(int i = 0; i < fields.size(); ++i)
+        {
+            try
+            {
+                msg_peripheral.pulse_in.push_back(boost::lexical_cast<unsigned int>(fields[i]));
+            }
+            catch (std::bad_cast& e)
+            {
+                msg_peripheral.pulse_in.push_back(0);
+            }
+        }
+        string pulse_in_2 = mSerial_2->getQuery("PI");
+        boost::split(fields, pulse_in_2, boost::algorithm::is_any_of(":"));
+        for(int i = 0; i < fields.size(); ++i)
+        {
+            try
+            {
+                msg_peripheral.pulse_in.push_back(boost::lexical_cast<unsigned int>(fields[i]));
+            }
+            catch (std::bad_cast& e)
+            {
+                msg_peripheral.pulse_in.push_back(0);
+            }
+        }
+
+        // Get analog input values [pag. 231]
+        string analog_1 = mSerial_1->getQuery("AI");
+        boost::split(fields, analog_1, boost::algorithm::is_any_of(":"));
+        // Clear msg list
+        msg_peripheral.analog.clear();
+        for(int i = 0; i < fields.size(); ++i)
+        {
+            try
+            {
+                msg_peripheral.analog.push_back(boost::lexical_cast<double>(fields[i]) / 1000.0);
+            }
+            catch (std::bad_cast& e)
+            {
+                msg_peripheral.analog.push_back(0);
+            }
+        }
+        // Get analog input values [pag. 231]
+        string analog_2 = mSerial_2->getQuery("AI");
+        boost::split(fields, analog_2, boost::algorithm::is_any_of(":"));
+        for(int i = 0; i < fields.size(); ++i)
+        {
+            try
+            {
+                msg_peripheral.analog.push_back(boost::lexical_cast<double>(fields[i]) / 1000.0);
+            }
+            catch (std::bad_cast& e)
+            {
+                msg_peripheral.analog.push_back(0);
+            }
+        }
+        
+        // Get Digital input values [pag. 242]
+        string digital_in_1 = mSerial_1->getQuery("DI");
+    
+        boost::split(fields, digital_in_1, boost::algorithm::is_any_of(":"));
+        // Clear msg list
+        
         msg_peripheral.digital_in.clear();
-        
-        auto read_motor_peripheral_1 = [&]() {
-            std::vector<std::string> fields;
-                // Get Digital input values [pag. 242]
-            string digital_in_1 = mSerial_1->getQuery("DI");
-        
-            boost::split(fields, digital_in_1, boost::algorithm::is_any_of(":"));
-            // Clear msg list
-            
-            msg_peripheral_1.digital_in.clear();
-            for(int i = 0; i < fields.size(); ++i)
+        for(int i = 0; i < fields.size(); ++i)
+        {
+            try
             {
-                try
-                {
-                    msg_peripheral_1.digital_in.push_back(boost::lexical_cast<unsigned int>(fields[i]));
-                }
-                catch (std::bad_cast& e)
-                {
-                    msg_peripheral_1.digital_in.push_back(0);
-                }
+                msg_peripheral.digital_in.push_back(boost::lexical_cast<unsigned int>(fields[i]));
             }
-        };
-        auto read_motor_peripheral_2 = [&]() {
-            std::vector<std::string> fields;
-
-            // Get Digital input values [pag. 242]
-            string digital_in_2 = mSerial_2->getQuery("DI");
-            boost::split(fields, digital_in_2, boost::algorithm::is_any_of(":"));
-            
-            msg_peripheral_2.digital_in.clear();
-            for(int i = 0; i < fields.size(); ++i)
+            catch (std::bad_cast& e)
             {
-                try
-                {
-                    msg_peripheral_2.digital_in.push_back(boost::lexical_cast<unsigned int>(fields[i]));
-                }
-                catch (std::bad_cast& e)
-                {
-                    msg_peripheral_2.digital_in.push_back(0);
-                }
-                
+                msg_peripheral.digital_in.push_back(0);
             }
-        };
-
-        std::thread thread_3(read_motor_peripheral_1);
-        std::thread thread_4(read_motor_peripheral_2);
-
-        thread_3.join();
-        thread_4.join();
-
-        // Merge peripheral msgs (digital_in)
-        msg_peripheral.digital_in.insert(msg_peripheral.digital_in.end(), msg_peripheral_1.digital_in.begin(), msg_peripheral_1.digital_in.end());
-        msg_peripheral.digital_in.insert(msg_peripheral.digital_in.end(), msg_peripheral_2.digital_in.begin(), msg_peripheral_2.digital_in.end());
+           
+        }
+        // Get Digital input values [pag. 242]
+        string digital_in_2 = mSerial_2->getQuery("DI");
+        boost::split(fields, digital_in_2, boost::algorithm::is_any_of(":"));
+        for(int i = 0; i < fields.size(); ++i)
+        {
+            try
+            {
+                msg_peripheral.digital_in.push_back(boost::lexical_cast<unsigned int>(fields[i]));
+            }
+            catch (std::bad_cast& e)
+            {
+                msg_peripheral.digital_in.push_back(0);
+            }
+            
+        }
+        
+        
+       
+        string digital_out_1 = mSerial_1->getQuery("DO");
+        unsigned int num = 0;
+        try
+        {
+            num = boost::lexical_cast<unsigned int>(digital_out_1);
+        }
+        catch (std::bad_cast& e)
+        {
+            num = 0;
+        }
+        int mask = 0x0;
+        // Clear msg list
+        msg_peripheral.digital_out.clear();
+        for(int i = 0; i < 8; ++i)
+        {
+            msg_peripheral.digital_out.push_back((mask & num));
+            mask <<= 1;
+        }
+        string digital_out_2 = mSerial_2->getQuery("DO");
+        num = 0;
+        try
+        {
+            num = boost::lexical_cast<unsigned int>(digital_out_2);
+        }
+        catch (std::bad_cast& e)
+        {
+            num = 0;
+        }
+        mask = 0x0;
+        for(int i = 0; i < 8; ++i)
+        {
+            msg_peripheral.digital_out.push_back((mask & num));
+            mask <<= 1;
+        }
 
         // Send GPIO status
         pub_peripheral.publish(msg_peripheral);

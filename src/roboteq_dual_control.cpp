@@ -78,8 +78,7 @@ void siginthandler(int param)
 void controlLoop(roboteq::Roboteq &roboteq,
                  controller_manager::ControllerManager &cm,
                  time_source::time_point &last_time)
-{
-
+{        
     // Calculate monotonic time difference
     time_source::time_point this_time = time_source::now();
     boost::chrono::duration<double> elapsed_duration = this_time - last_time;
@@ -88,9 +87,25 @@ void controlLoop(roboteq::Roboteq &roboteq,
 
     //ROS_INFO_STREAM("CONTROL - running");
     // Process control loop
+    auto complete_time = std::chrono::steady_clock::now();
+    auto start_time = std::chrono::steady_clock::now();
     roboteq.read(ros::Time::now(), elapsed);
+    auto end_time = std::chrono::steady_clock::now();
+    double elapsed_ms = std::chrono::duration<double, std::milli>(end_time - start_time).count();
+    // ROS_INFO_STREAM("Read time: " << elapsed_ms << " ms");
+    start_time = std::chrono::steady_clock::now();
     cm.update(ros::Time::now(), elapsed);
+    end_time = std::chrono::steady_clock::now();
+    elapsed_ms = std::chrono::duration<double, std::milli>(end_time - start_time).count();
+    // ROS_INFO_STREAM("Update time: " << elapsed_ms << " ms");
+    start_time = std::chrono::steady_clock::now();
     roboteq.write(ros::Time::now(), elapsed);
+    end_time = std::chrono::steady_clock::now();
+    elapsed_ms = std::chrono::duration<double, std::milli>(end_time - start_time).count();
+    // ROS_INFO_STREAM("Write time: " << elapsed_ms << " ms");
+    auto end_time_complete = std::chrono::steady_clock::now();
+    double elapsed_ms_complete = std::chrono::duration<double, std::milli>(end_time_complete - complete_time).count();
+    // ROS_INFO_STREAM("Complete time: " << elapsed_ms_complete << " ms");
 }
 
 /**
@@ -161,11 +176,11 @@ int main(int argc, char **argv) {
         // Global variable
         control_loop = nh.createTimer(control_timer);
 
-        ros::TimerOptions diagnostic_timer(
-                    ros::Duration(1 / diagnostic_frequency),
-                    boost::bind(diagnosticLoop, boost::ref(*interface)),
-                    &roboteq_queue);
-        diagnostic_loop = nh.createTimer(diagnostic_timer);
+        // ros::TimerOptions diagnostic_timer(
+        //             ros::Duration(1 / diagnostic_frequency),
+        //             boost::bind(diagnosticLoop, boost::ref(*interface)),
+        //             &roboteq_queue);
+        // diagnostic_loop = nh.createTimer(diagnostic_timer);
 
         roboteq_spinner->start();
 
