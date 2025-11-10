@@ -32,7 +32,9 @@
 #include "roboteq/roboteq_dual.h"
 #include <boost/algorithm/string.hpp>
 #include "std_msgs/String.h"
+#include "std_msgs/Float32.h"
 #include <thread>
+#include <roboteq_control/ControllerAmps.h>
 namespace roboteq
 {
 
@@ -78,6 +80,11 @@ Roboteq::Roboteq(const ros::NodeHandle &nh, const ros::NodeHandle &private_nh, s
         joint_list_2.push_back("joint_1");
         private_nh.setParam("joint", joint_list_2);
     }
+
+    // Read debugging flag
+    private_nh.param("debug", _debugging, false);
+    ROS_INFO_STREAM("Debugging flag: " << (_debugging ? "true" : "false"));
+
     // Disable ECHO
     mSerial_1->echo(false);
     mSerial_2->echo(false);
@@ -170,7 +177,12 @@ Roboteq::Roboteq(const ros::NodeHandle &nh, const ros::NodeHandle &private_nh, s
     // Initialize the peripheral publisher
     pub_peripheral = private_mNh.advertise<roboteq_control::Peripheral>("peripheral", 10,
                 boost::bind(&Roboteq::connectionCallback, this, _1), boost::bind(&Roboteq::connectionCallback, this, _1));
-
+    
+    if (_debugging) {
+        pub_amps_ = private_mNh.advertise<roboteq_control::ControllerAmps>("controller_amps", 10);
+        temp_pub_1 = private_mNh.advertise<std_msgs::Float32>("controller1_temperature", 1);
+        temp_pub_2 = private_mNh.advertise<std_msgs::Float32>("controller2_temperature", 1);
+    }
 }
 
 void Roboteq::connectionCallback(const ros::SingleSubscriberPublisher& pub) {
@@ -412,15 +424,19 @@ void Roboteq::updateDiagnostics()
         // temperature channels [pag. 259]
         string temperature_1 = mSerial_1->getQuery("T", "1");
         _temp_mcu = boost::lexical_cast<double>(temperature_1);
+        // ROS_INFO_STREAM("T_mcu=" << _temp_mcu);
         string temperature_2 = mSerial_1->getQuery("T", "2");
         _temp_bridge = boost::lexical_cast<double>(temperature_2);
+        // ROS_INFO_STREAM("T_bridge=" << _temp_bridge);
         // Force update all diagnostic parts
         diagnostic_updater.force_update();
     }
     catch (std::bad_cast& e)
     {
         ROS_WARN_STREAM("Diagnostic: Failure parsing feedback data. Dropping message." << e.what());
-    }
+    }std_msgs::Float32 temp_msg_1;
+        temp_msg_1.data = _temp_mcu;    // or use _temp_bridge or combine both if needed
+        temp_pub_1.publish(temp_msg_1);
      try
     {
         // Fault flag [pag. 245]
@@ -452,10 +468,21 @@ void Roboteq::updateDiagnostics()
 
 void Roboteq::read(const ros::Time& time, const ros::Duration& period) {
     motor_loop_ = true;
-
+    std::vector<float> amps_1, amps_2;
+    
     auto read_motor_1 = [&]() {
         std::vector<std::string> motors_1[mMotor_1.size()];
         std::vector<std::string> fields;
+        if (_debugging) {
+            // Read status motor
+            // motor status flags [pag. 246]
+            string str_status_1 = mSerial_1->getQuery("FM");
+            // ROS_INFO_STREAM("FM=" << str_status_1);
+            boost::split(fields, str_status_1, boost::algorithm::is_any_of(":"));
+            for(int i = 0; i < fields.size(); ++i) {
+                motors_1[i].push_back(fields[i]);
+            }
+        }
         
         // motor feedback [pag. 244]
         string str_feedback_1 = mSerial_1->getQuery("F");
@@ -473,6 +500,25 @@ void Roboteq::read(const ros::Time& time, const ros::Duration& period) {
             motors_1[i].push_back(fields[i]);
         }
 
+        if (_debugging) {
+            // motor Amps [pag. 230]
+            string str_motor_amps_1 = mSerial_1->getQuery("A");
+            // ROS_INFO_STREAM("A =" << str_motor_amps_1);
+            boost::split(fields, str_motor_amps_1, boost::algorithm::is_any_of(":"));
+            for(int i = 0; i < fields.size(); ++i) {
+                motors_1[i].push_back(fields[i]);
+            }
+            // Convert fields to floats
+            amps_1.clear();
+            for (const std::string& f : fields) {
+                try {
+                float val = std::stof(f);
+                amps_1.push_back(val / 10.0f); 
+                } catch (...) {
+                    amps_1.push_back(0.0);
+                }
+            }
+        }
         // send list
         for(int i = 0; i < mMotor_1.size(); ++i) {
             //get number motor initialization
@@ -480,11 +526,26 @@ void Roboteq::read(const ros::Time& time, const ros::Duration& period) {
             // Read and decode vector
             mMotor_1[i]->readVector(motors_1[idx]);
         }
+
+        if (_debugging) {
+            string temperature_1 = mSerial_1->getQuery("T", "1");
+            _temp_mcu = boost::lexical_cast<double>(temperature_1);
+        }
     };
 
     auto read_motor_2 = [&]() {
         std::vector<std::string> motors_2[mMotor_2.size()];
         std::vector<std::string> fields;
+
+        if (_debugging) {
+            // motor status flags [pag. 246]
+            string str_status_2 = mSerial_2->getQuery("FM");
+            // ROS_INFO_STREAM("FM=" << str_status_2);
+            boost::split(fields, str_status_2, boost::algorithm::is_any_of(":"));
+            for(int i = 0; i < fields.size(); ++i) {
+                motors_2[i].push_back(fields[i]);
+            }
+        }
 
         // motor feedback [pag. 244]
         string str_feedback_2 = mSerial_2->getQuery("F");
@@ -502,12 +563,34 @@ void Roboteq::read(const ros::Time& time, const ros::Duration& period) {
             motors_2[i].push_back(fields[i]);
         }
 
+        if (_debugging) {
+            string str_motor_amps_2 = mSerial_2->getQuery("A");
+            // ROS_INFO_STREAM("A =" << str_motor_amps_2);
+            boost::split(fields, str_motor_amps_2, boost::algorithm::is_any_of(":"));
+            for(int i = 0; i < fields.size(); ++i) {
+                motors_2[i].push_back(fields[i]);
+            }
+            amps_2.clear();
+            for (const std::string& f : fields) {
+                try {
+                    float val = std::stof(f);
+                    amps_2.push_back(val / 10.0f); 
+                } catch (...) {
+                    amps_2.push_back(0.0);
+                }
+            }
+        }
+
         // send list
         for(int i = 0; i < mMotor_2.size(); ++i) {
             //get number motor initialization
             unsigned int idx = mMotor_2[i]->mNumber-1;
             // Read and decode vector
             mMotor_2[i]->readVector(motors_2[idx]);
+        }
+        if (_debugging) {
+            string temperature_2 = mSerial_2->getQuery("T", "1");
+            _temp_mcu = boost::lexical_cast<double>(temperature_2);
         }
     };
 
@@ -516,6 +599,22 @@ void Roboteq::read(const ros::Time& time, const ros::Duration& period) {
 
     thread_1.join();
     thread_2.join();
+
+    if (_debugging) {
+        roboteq_control::ControllerAmps amps_msg;
+        amps_msg.header.stamp = ros::Time::now();
+        amps_msg.controller1_amps = amps_1;
+        amps_msg.controller2_amps = amps_2;
+        pub_amps_.publish(amps_msg);
+    
+        std_msgs::Float32 temp_msg_2;
+        temp_msg_2.data = _temp_mcu;    // or use separate storage for controller2 values if available
+        temp_pub_2.publish(temp_msg_2);
+    
+        std_msgs::Float32 temp_msg_1;
+        temp_msg_1.data = _temp_mcu;    // or use _temp_bridge or combine both if needed
+        temp_pub_1.publish(temp_msg_1);
+    }
 
     // Read data from GPIO
     if(_isGPIOreading)

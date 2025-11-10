@@ -146,6 +146,10 @@ private:
     // Publisher status periheral
     ros::Publisher pub_peripheral;
     ros::Publisher pub_sto;
+    ros::Publisher pub_amps_;
+    ros::Publisher temp_pub_1;
+    ros::Publisher temp_pub_2;
+    
     // stop publisher
     ros::Subscriber sub_stop;
     
@@ -188,6 +192,8 @@ private:
     // Encoder
     std::vector<GPIOEncoderConfigurator*> _param_encoder;
 
+    // Flag for debugging purposes
+    bool _debugging = false;
 
     // stop callback
     void stop_Callback(const std_msgs::Bool::ConstPtr& msg);
