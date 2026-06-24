@@ -36,6 +36,7 @@
 #include "roboteq/serial_controller.h"
 #include "roboteq/roboteq_dual.h"
 
+#include <algorithm>
 #include <boost/chrono.hpp>
 #include <boost/algorithm/algorithm.hpp>
 
@@ -133,19 +134,36 @@ int main(int argc, char **argv) {
 
     string serial_port_string_1, serial_port_string_2;
     int32_t baud_rate_1, baud_rate_2;
+    int32_t serial_timeout_ms_1, serial_timeout_ms_2;
+    int32_t serial_response_timeout_ms;
+    int32_t serial_max_retries;
 
     private_nh.param<string>("serial_port_1", serial_port_string_1, "/dev/ttyACM0");
     private_nh.param<int32_t>("serial_rate_1", baud_rate_1, 115200);
+    private_nh.param<int32_t>("serial_timeout_ms_1", serial_timeout_ms_1, 50);
+    private_nh.param<int32_t>("serial_response_timeout_ms", serial_response_timeout_ms, 30);
+    private_nh.param<int32_t>("serial_max_retries", serial_max_retries, 2);
+    serial_timeout_ms_1 = std::max<int32_t>(1, serial_timeout_ms_1);
+    serial_response_timeout_ms = std::max<int32_t>(1, serial_response_timeout_ms);
+    serial_max_retries = std::max<int32_t>(1, serial_max_retries);
     ROS_INFO_STREAM("Open Serial " << serial_port_string_1 << ":" << baud_rate_1);
 
-    rSerial_1 = new roboteq::serial_controller(serial_port_string_1, baud_rate_1);
+    rSerial_1 = new roboteq::serial_controller(serial_port_string_1, baud_rate_1,
+                                               static_cast<uint32_t>(serial_timeout_ms_1),
+                                               static_cast<uint32_t>(serial_response_timeout_ms),
+                                               static_cast<uint32_t>(serial_max_retries));
 
 
     private_nh.param<string>("serial_port_2", serial_port_string_2, "/dev/ttyACM1");
     private_nh.param<int32_t>("serial_rate_2", baud_rate_2, 115200);
+    private_nh.param<int32_t>("serial_timeout_ms_2", serial_timeout_ms_2, 50);
+    serial_timeout_ms_2 = std::max<int32_t>(1, serial_timeout_ms_2);
     ROS_INFO_STREAM("Open Serial " << serial_port_string_2 << ":" << baud_rate_2);
 
-    rSerial_2 = new roboteq::serial_controller(serial_port_string_2, baud_rate_2);
+    rSerial_2 = new roboteq::serial_controller(serial_port_string_2, baud_rate_2,
+                                               static_cast<uint32_t>(serial_timeout_ms_2),
+                                               static_cast<uint32_t>(serial_response_timeout_ms),
+                                               static_cast<uint32_t>(serial_max_retries));
     // Run the serial controllers
     bool start = rSerial_1->start() && rSerial_2->start();
 

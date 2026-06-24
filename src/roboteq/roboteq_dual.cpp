@@ -30,6 +30,7 @@
 
 
 #include "roboteq/roboteq_dual.h"
+#include <algorithm>
 #include <boost/algorithm/string.hpp>
 #include "std_msgs/String.h"
 #include "std_msgs/Float32.h"
@@ -47,8 +48,12 @@ Roboteq::Roboteq(const ros::NodeHandle &nh, const ros::NodeHandle &private_nh, s
 {
     // First run dynamic reconfigurator
     setup_controller = false;
-    // Initialize GPIO reading
-    _isGPIOreading = true;
+    // Initialize GPIO reading and decimate polling to avoid slowing the control loop.
+    _isGPIOreading = false;
+    double gpio_poll_frequency = 0.0;
+    private_nh.param("gpio_poll_frequency", gpio_poll_frequency, 0.0);
+    _gpio_poll_interval_s = (gpio_poll_frequency > 0.0) ? (1.0 / gpio_poll_frequency) : 0.0;
+    _last_gpio_poll_time = ros::Time(0);
     // Load default configuration roboteq board
     getRoboteqInformation();
 
@@ -183,6 +188,9 @@ Roboteq::Roboteq(const ros::NodeHandle &nh, const ros::NodeHandle &private_nh, s
         temp_pub_1 = private_mNh.advertise<std_msgs::Float32>("controller1_temperature", 1);
         temp_pub_2 = private_mNh.advertise<std_msgs::Float32>("controller2_temperature", 1);
     }
+
+    mSerial_1->script(true);
+    mSerial_2->script(true);
 }
 
 void Roboteq::connectionCallback(const ros::SingleSubscriberPublisher& pub) {
@@ -617,11 +625,17 @@ void Roboteq::read(const ros::Time& time, const ros::Duration& period) {
     }
 
     // Read data from GPIO
-    if(_isGPIOreading)
+    const ros::Time now = ros::Time::now();
+    const bool should_poll_gpio = _isGPIOreading &&
+                                  (_gpio_poll_interval_s <= 0.0 ||
+                                   _last_gpio_poll_time.isZero() ||
+                                   (now - _last_gpio_poll_time).toSec() >= _gpio_poll_interval_s);
+    if (should_poll_gpio)
     {
+        _last_gpio_poll_time = now;
         roboteq_control::Peripheral msg_peripheral_1, msg_peripheral_2;
 
-        msg_peripheral.header.stamp = ros::Time::now();
+        msg_peripheral.header.stamp = now;
         msg_peripheral.digital_in.clear();
         
         auto read_motor_peripheral_1 = [&]() {

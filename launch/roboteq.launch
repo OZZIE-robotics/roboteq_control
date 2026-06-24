@@ -45,6 +45,11 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     <rosparam subst_value="true">
       serial_port: $(arg port)
       serial_rate: 115200
+      serial_timeout_ms: 50
+      serial_response_timeout_ms: 30
+      serial_max_retries: 2
+      command_min_delta: 1
+      command_keepalive_s: 0.10
       control_frequency: 50.0
       diagnostic_frequency: 5.0
     </rosparam>

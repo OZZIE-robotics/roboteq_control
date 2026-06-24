@@ -30,21 +30,31 @@
 
 #include "roboteq/serial_controller.h"
 
-#include <regex>
+#include <algorithm>
+#include <boost/algorithm/string.hpp>
 
 namespace roboteq {
 
 const std::string eol("\r");
 const size_t max_line_length(128);
-const std::regex rgx_query("(.+)=(.+)\r");
-const std::regex rgx_cmd("(\\+|-)\r");
 
-serial_controller::serial_controller(string port, unsigned long baudrate)
+serial_controller::serial_controller(string port, unsigned long baudrate, uint32_t serial_timeout_ms,
+                                     uint32_t response_timeout_ms, uint32_t max_retries)
     : mSerialPort(port)
     , mBaudrate(baudrate)
+    , mTimeout(serial_timeout_ms)
+    , mResponseTimeoutMs(response_timeout_ms)
+    , mMaxRetries(std::max<uint32_t>(1, max_retries))
+    , mCommandData(false)
+    , mQueryData(false)
 {
-    // Default timeout
-    mTimeout = 500;
+    // Keep timeout values in a valid range.
+    if (mTimeout == 0) {
+        mTimeout = 1;
+    }
+    if (mResponseTimeoutMs == 0) {
+        mResponseTimeoutMs = 1;
+    }
 }
 
 serial_controller::~serial_controller()
@@ -199,15 +209,15 @@ bool serial_controller::command(string msg, string params, string type)
         msg2 = type + msg + " " + params + eol;
     }
     unsigned int counter = 0;
-    while (counter < 5)
+    sub_data_cmd = false;
+    while (counter < mMaxRetries)
     {
         mSerial.write(msg2.c_str());
-        data = false;
+        mCommandData = false;
         // Set lock variable and wait a data to return
         std::unique_lock<std::mutex> lck(mReaderMutex);
-        // TODO change timeout
-        cv.wait_for(lck, std::chrono::seconds(1));
-        if(data)
+        cv.wait_for(lck, std::chrono::milliseconds(mResponseTimeoutMs), [this]{ return mCommandData; });
+        if(mCommandData)
         {
             ROS_DEBUG_STREAM("N:" << (counter+1) << " CMD:" << msg << " DATA:" << sub_data_cmd);
             break;
@@ -233,15 +243,16 @@ bool serial_controller::query(string msg, string params, string type) {
     }
 
     unsigned int counter = 0;
-    while (counter < 5)
+    mQueryData = false;
+    while (counter < mMaxRetries)
     {
         ROS_DEBUG_STREAM("N:" << (counter+1) << " TX: " << msg);
         mSerial.write(msg2.c_str());
-        data = false;
+        mQueryData = false;
         // Set lock variable and wait a data to return
         std::unique_lock<std::mutex> lck(mReaderMutex);
-        cv.wait_for(lck, std::chrono::seconds(1));
-        if(data)
+        cv.wait_for(lck, std::chrono::milliseconds(mResponseTimeoutMs), [this]{ return mQueryData; });
+        if(mQueryData)
         {
             ROS_DEBUG_STREAM("N:" << (counter+1) << " CMD:" << msg << " DATA:" << sub_data);
             break;
@@ -255,7 +266,7 @@ bool serial_controller::query(string msg, string params, string type) {
     mMessage = "";
     // Unlock mutex
     mWriteMutex.unlock();
-    return data;
+    return mQueryData;
 }
 
 void serial_controller::async_reader()
@@ -268,31 +279,37 @@ void serial_controller::async_reader()
         // Decode message
         if (!msg.empty())
         {
+          boost::algorithm::trim_if(msg, boost::algorithm::is_any_of("\r\n"));
+          if (msg.empty())
+          {
+              continue;
+          }
           ROS_DEBUG_STREAM_NAMED("serial", "RX: " << msg);
-          if (std::regex_match(msg, rgx_cmd))
+          if (msg == "+" || msg == "-" || msg == "?+" || msg == "?-")
           {
               // Decode if command return true
-              if(msg[0] == '+') sub_data_cmd = true;
+              if(msg.find('+') != std::string::npos) sub_data_cmd = true;
               else sub_data_cmd = false;
               // Unlock command
-              data = true;
-              // Unlock query request
+              mCommandData = true;
               cv.notify_all();
           }
-          else if(std::regex_match(msg, rgx_query))
+          else if(msg.find('=') != std::string::npos)
           {
               // Get command
-              string sub_cmd = msg.substr(0, msg.find('='));
-              // Evaluate end position string
-              long end_string = (msg.size()-1) - (msg.find('=') + 1);
+              const size_t separator = msg.find('=');
+              string sub_cmd = msg.substr(0, separator);
+              if (!sub_cmd.empty() && sub_cmd[0] == '?')
+              {
+                  sub_cmd = sub_cmd.substr(1);
+              }
               // Get data
-              sub_data = msg.substr(msg.find('=') + 1, end_string);
+              sub_data = msg.substr(separator + 1);
               // ROS_INFO_STREAM("CMD=" << sub_cmd << " DATA=" << sub_data);
               // Check first of all a message sent require a data to return
               if(mMessage.compare("") != 0) {
                   if(mMessage.compare(sub_cmd) == 0) {
-                      data = true;
-                      // Unlock query request
+                      mQueryData = true;
                       cv.notify_all();
                       // Skip other request
                       continue;
@@ -307,7 +324,7 @@ void serial_controller::async_reader()
                   callback(sub_data);
               }
           }
-          else if(msg.compare("HLD\r") == 0)
+          else if(msg == "HLD")
           {
               isHLD = true;
               // Unlock query request
@@ -315,7 +332,7 @@ void serial_controller::async_reader()
           }
           else
           {
-              ROS_INFO_STREAM("Other message " << msg);
+              ROS_DEBUG_STREAM_THROTTLE(1.0, "Unhandled serial message: " << msg);
           }
         }
     }
