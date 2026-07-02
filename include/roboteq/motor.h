@@ -192,6 +192,12 @@ private:
     double ratio_;
     // max RPM
     double max_rpm_;
+    // Optional command traffic reduction.
+    int command_min_delta_;
+    double command_keepalive_s_;
+    bool has_last_command_;
+    long long int last_roboteq_velocity_;
+    ros::Time last_command_sent_time_;
 
     int _control_mode;
     motor_status_t status_;

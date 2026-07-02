@@ -185,6 +185,9 @@ private:
 
     // GPIO enable read
     bool _isGPIOreading;
+    // Limit GPIO polling impact on the fast control loop (0 = every loop).
+    double _gpio_poll_interval_s;
+    ros::Time _last_gpio_poll_time;
     roboteq_control::Peripheral msg_peripheral;
     
     std::vector<GPIOAnalogConfigurator*> _param_analog;

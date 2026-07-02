@@ -29,6 +29,8 @@
  */
 
 #include "roboteq/motor.h"
+#include <algorithm>
+#include <cstdlib>
 #include <boost/algorithm/algorithm.hpp>
 #include <boost/algorithm/string.hpp>
 #include <hardware_interface/joint_state_interface.h>
@@ -64,6 +66,16 @@ Motor::Motor(const ros::NodeHandle& nh, serial_controller *serial, string name, 
     // Get encoder max speed parameter
     max_rpm_ = 0;
     mNh.getParam(mMotorName + "/max_speed", max_rpm_);
+    // Reduce serial traffic by only sending changed commands and occasional keepalive.
+    mNh.param("command_min_delta", command_min_delta_, 0);
+    mNh.param("command_keepalive_s", command_keepalive_s_, 0.1);
+    mNh.param(mMotorName + "/command_min_delta", command_min_delta_, command_min_delta_);
+    mNh.param(mMotorName + "/command_keepalive_s", command_keepalive_s_, command_keepalive_s_);
+    command_min_delta_ = std::max(0, command_min_delta_);
+    command_keepalive_s_ = std::max(0.0, command_keepalive_s_);
+    has_last_command_ = false;
+    last_roboteq_velocity_ = 0;
+    last_command_sent_time_ = ros::Time(0);
 
     // Initialize Dynamic reconfigurator for generic parameters
     parameter = new MotorParamConfigurator(nh, serial, mMotorName, number);
@@ -355,11 +367,23 @@ void Motor::writeCommandsToHardware(ros::Duration period)
     mNh.getParam(mMotorName + "/max_speed", max_rpm);
     
     // Build a command message
-    long long int roboteq_velocity = static_cast<long long int>(to_rpm(command_) / max_rpm * 1000.0);
+    long long int roboteq_velocity = static_cast<long long int>(to_rpm(command_) / max_rpm_ * 1000.0);
+    const ros::Time now = ros::Time::now();
+    const bool command_changed = !has_last_command_ ||
+                                 (std::llabs(roboteq_velocity - last_roboteq_velocity_) > command_min_delta_);
+    const bool keepalive_due = has_last_command_ && (command_keepalive_s_ > 0.0) &&
+                               ((now - last_command_sent_time_).toSec() >= command_keepalive_s_);
+    if (!command_changed && !keepalive_due)
+    {
+        return;
+    }
 
     // ROS_INFO_STREAM("Velocity" << mNumber << " val=" << command_ << " " << roboteq_velocity);
 
     mSerial->command("G ", std::to_string(mNumber) + " " + std::to_string(roboteq_velocity));
+    has_last_command_ = true;
+    last_roboteq_velocity_ = roboteq_velocity;
+    last_command_sent_time_ = now;
 }
 
 void Motor::read(string data) {
@@ -371,6 +395,11 @@ void Motor::read(string data) {
 
 void Motor::readVector(std::vector<std::string> fields) {
     double position, vel, volts, amps_motor;
+    if (fields.size() < 2) {
+        ROS_WARN_STREAM_THROTTLE(1.0, " [" << mNumber << "] " << mMotorName
+                                 << ": Incomplete feedback vector (" << fields.size() << " fields)");
+        return;
+    }
     // Scale factors as outlined in the relevant portions of the user manual, please
     // see mbs/script.mbs for URL and specific page references.
     try

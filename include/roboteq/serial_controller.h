@@ -54,7 +54,8 @@ public:
      * @param port set the port
      * @param set the baudrate
      */
-    serial_controller(string port, unsigned long baudrate);
+    serial_controller(string port, unsigned long baudrate, uint32_t serial_timeout_ms=50,
+                      uint32_t response_timeout_ms=50, uint32_t max_retries=2);
 
     ~serial_controller();
     /**
@@ -215,13 +216,18 @@ private:
     uint32_t mBaudrate;
     // Timeout open serial port
     uint32_t mTimeout;
+    // Timeout for command/query response wait
+    uint32_t mResponseTimeoutMs;
+    // Number of retries for command/query calls
+    uint32_t mMaxRetries;
     // Used to stop the serial processing
     bool mStopping;
     // Last message sent
     string mMessage;
     string sub_data;
     bool sub_data_cmd;
-    bool data;
+    bool mCommandData;
+    bool mQueryData;
     // Async reader controller
     std::thread first;
     // Mutex to sto concurent sending
