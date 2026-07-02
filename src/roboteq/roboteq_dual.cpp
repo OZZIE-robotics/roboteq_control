@@ -35,6 +35,7 @@
 #include "std_msgs/Float32.h"
 #include <thread>
 #include <roboteq_control/ControllerAmps.h>
+#include <roboteq_control/ControllerState.h>
 namespace roboteq
 {
 
@@ -89,8 +90,8 @@ Roboteq::Roboteq(const ros::NodeHandle &nh, const ros::NodeHandle &private_nh, s
     mSerial_1->echo(false);
     mSerial_2->echo(false);
     // Disable Script and wait to load all parameters
-    mSerial_1->script(false);
-    mSerial_2->script(false);
+    mSerial_1->script(true);
+    mSerial_2->script(true);
     // Stop motors
     bool stop_motor_1 = mSerial_1->command("EX");
     bool stop_motor_2 = mSerial_2->command("EX");
@@ -182,6 +183,7 @@ Roboteq::Roboteq(const ros::NodeHandle &nh, const ros::NodeHandle &private_nh, s
         pub_amps_ = private_mNh.advertise<roboteq_control::ControllerAmps>("controller_amps", 10);
         temp_pub_1 = private_mNh.advertise<std_msgs::Float32>("controller1_temperature", 1);
         temp_pub_2 = private_mNh.advertise<std_msgs::Float32>("controller2_temperature", 1);
+        pub_state_ = private_mNh.advertise<roboteq_control::ControllerState>("controller_state", 10);
     }
 }
 
@@ -469,7 +471,10 @@ void Roboteq::updateDiagnostics()
 void Roboteq::read(const ros::Time& time, const ros::Duration& period) {
     motor_loop_ = true;
     std::vector<float> amps_1, amps_2;
-    
+    uint8_t fault1 = 0, status1 = 0;
+    uint8_t fault2 = 0, status2 = 0;
+
+
     auto read_motor_1 = [&]() {
         std::vector<std::string> motors_1[mMotor_1.size()];
         std::vector<std::string> fields;
@@ -530,6 +535,23 @@ void Roboteq::read(const ros::Time& time, const ros::Duration& period) {
         if (_debugging) {
             string temperature_1 = mSerial_1->getQuery("T", "1");
             _temp_mcu = boost::lexical_cast<double>(temperature_1);
+
+            std::string fault_flag_1 = mSerial_1->getQuery("FF");
+            std::string status_flag_1 = mSerial_1->getQuery("FS");
+
+            try {
+                unsigned int f = boost::lexical_cast<unsigned int>(fault_flag_1);
+                fault1 = static_cast<uint8_t>(f);
+            } catch (...) {
+                fault1 = 0;
+            }
+
+            try {
+                unsigned int s = boost::lexical_cast<unsigned int>(status_flag_1);
+                status1 = static_cast<uint8_t>(s);
+            } catch (...) {
+                status1 = 0;
+            }
         }
     };
 
@@ -591,6 +613,23 @@ void Roboteq::read(const ros::Time& time, const ros::Duration& period) {
         if (_debugging) {
             string temperature_2 = mSerial_2->getQuery("T", "1");
             _temp_mcu = boost::lexical_cast<double>(temperature_2);
+
+            std::string fault_flag_2 = mSerial_2->getQuery("FF");
+            std::string status_flag_2 = mSerial_2->getQuery("FS");
+
+            try {
+                unsigned int f = boost::lexical_cast<unsigned int>(fault_flag_2);
+                fault2 = static_cast<uint8_t>(f);
+            } catch (...) {
+                fault2 = 0;
+            }
+
+            try {
+                unsigned int s = boost::lexical_cast<unsigned int>(status_flag_2);
+                status2 = static_cast<uint8_t>(s);
+            } catch (...) {
+                status2 = 0;
+            }
         }
     };
 
@@ -614,6 +653,14 @@ void Roboteq::read(const ros::Time& time, const ros::Duration& period) {
         std_msgs::Float32 temp_msg_1;
         temp_msg_1.data = _temp_mcu;    // or use _temp_bridge or combine both if needed
         temp_pub_1.publish(temp_msg_1);
+        
+        roboteq_control::ControllerState state_msg;
+        state_msg.header.stamp          = ros::Time::now();
+        state_msg.controller1_fault_raw = fault1;
+        state_msg.controller1_status_raw= status1;
+        state_msg.controller2_fault_raw = fault2;
+        state_msg.controller2_status_raw= status2;
+        pub_state_.publish(state_msg);
     }
 
     // Read data from GPIO

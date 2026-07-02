@@ -149,7 +149,7 @@ private:
     ros::Publisher pub_amps_;
     ros::Publisher temp_pub_1;
     ros::Publisher temp_pub_2;
-    
+    ros::Publisher pub_state_;
     // stop publisher
     ros::Subscriber sub_stop;
     

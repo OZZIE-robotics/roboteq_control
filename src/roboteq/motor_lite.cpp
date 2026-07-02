@@ -353,10 +353,11 @@ void Motor::writeCommandsToHardware(ros::Duration period)
     // Get encoder max speed parameter
     double max_rpm;
     mNh.getParam(mMotorName + "/max_speed", max_rpm);
+    
     // Build a command message
     long long int roboteq_velocity = static_cast<long long int>(to_rpm(command_) / max_rpm * 1000.0);
 
-    // ROS_INFO_STREAM("Velocity" << mNumber << " val=" << command << " " << roboteq_velocity);
+    // ROS_INFO_STREAM("Velocity" << mNumber << " val=" << command_ << " " << roboteq_velocity);
 
     mSerial->command("G ", std::to_string(mNumber) + " " + std::to_string(roboteq_velocity));
 }

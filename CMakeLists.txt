@@ -18,6 +18,7 @@ find_package(catkin REQUIRED
                     std_msgs
                     urdf
                     sensor_msgs
+                    message_generation
 )
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED
@@ -38,6 +39,7 @@ add_message_files(
     MotorStatus.msg
     Peripheral.msg
     ControllerAmps.msg
+    ControllerState.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -75,6 +77,7 @@ catkin_package(
         diagnostic_updater
         hardware_interface
         sensor_msgs
+        message_runtime
     DEPENDS
         Boost
 )

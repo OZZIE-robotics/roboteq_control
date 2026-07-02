@@ -1,0 +1,20 @@
+Header header
+
+uint8 controller1_fault_raw
+uint8 controller1_status_raw
+uint8 controller2_fault_raw
+uint8 controller2_status_raw
+
+bool controller1_emergency_stop
+bool controller1_overheat
+bool controller1_overvoltage
+bool controller1_undervoltage
+bool controller1_short_circuit
+bool controller1_mosfet_failure
+
+bool controller2_emergency_stop
+bool controller2_overheat
+bool controller2_overvoltage
+bool controller2_undervoltage
+bool controller2_short_circuit
+bool controller2_mosfet_failure

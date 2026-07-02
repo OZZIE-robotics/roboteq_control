@@ -83,7 +83,7 @@ bool serial_controller::start()
     first = std::thread(&serial_controller::async_reader, this);
     ROS_DEBUG_STREAM( "Serial port ready" );
 
-    /*
+   
     // Launch script and check version
     script(true);
     if(query("VAR", "1"))
@@ -92,9 +92,9 @@ bool serial_controller::start()
         // Stop script
         script(false);
 
-        if(_script_ver.compare(script_ver) != 0)
+        if(_script_ver.compare(_script_ver) != 0)
         {
-            ROS_WARN_STREAM("Script version mismatch. Updating V"  << _script_ver << "->V"<< script_ver << " ...");
+            ROS_WARN_STREAM("Script version mismatch. Updating V"  << _script_ver << "->V"<< _script_ver << " ...");
             if(downloadScript())
             {
                 ROS_WARN_STREAM("...Done!");
@@ -109,7 +109,7 @@ bool serial_controller::start()
             ROS_DEBUG_STREAM("Script V" << _script_ver);
         }
     }
-    */
+   
     return true;
 }
 
